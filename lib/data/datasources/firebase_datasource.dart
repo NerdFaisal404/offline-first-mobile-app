@@ -146,9 +146,11 @@ class FirebaseDataSource {
       return snapshot.docs.map((doc) {
         final data = doc.data();
         return DeviceData(
-          id: data['id'],
-          name: data['name'],
-          lastSeen: DateTime.parse(data['lastSeen']),
+          id: data['id'] ?? doc.id,
+          name: data['name'] ?? 'Unknown Device',
+          lastSeen: data['lastSeen'] != null
+              ? DateTime.parse(data['lastSeen'])
+              : DateTime.now(),
           isCurrentDevice: data['isCurrentDevice'] ?? false,
         );
       }).toList();
@@ -169,9 +171,11 @@ class FirebaseDataSource {
       return snapshot.docs.map((doc) {
         final data = doc.data();
         return DeviceData(
-          id: data['id'],
-          name: data['name'],
-          lastSeen: DateTime.parse(data['lastSeen']),
+          id: data['id'] ?? doc.id,
+          name: data['name'] ?? 'Unknown Device',
+          lastSeen: data['lastSeen'] != null
+              ? DateTime.parse(data['lastSeen'])
+              : DateTime.now(),
           isCurrentDevice: data['isCurrentDevice'] ?? false,
         );
       }).toList();

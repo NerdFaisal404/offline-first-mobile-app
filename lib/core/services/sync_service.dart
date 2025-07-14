@@ -308,9 +308,8 @@ class SyncService {
       final deviceId = await _todoRepository.getCurrentDeviceId();
 
       // Get device data from local database
-      final devices = await _localDatabase
-          .select(_localDatabase.devices)
-          .where((d) => d.id.equals(deviceId))
+      final devices = await (_localDatabase.select(_localDatabase.devices)
+            ..where((d) => d.id.equals(deviceId)))
           .get();
 
       if (devices.isNotEmpty) {
