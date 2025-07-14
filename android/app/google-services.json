@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "812003665669",
+    "project_id": "offline-distributed-todo-app",
+    "storage_bucket": "offline-distributed-todo-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:812003665669:android:ec88b85eebe5a6a085396c",
+        "android_client_info": {
+          "package_name": "io.cheq.offline_distributed_todo_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBylEYO7qPMStjz6_EU0Ud1oKByFzOcKSY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
