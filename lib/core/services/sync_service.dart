@@ -188,10 +188,16 @@ class SyncService {
 
   /// Get sync status
   Future<SyncStatus> getSyncStatus() async {
+    final todosNeedingSync = await _todoRepository.getTodosNeedingSync();
+    final unresolvedConflicts = await _todoRepository.getUnresolvedConflicts();
+
     return SyncStatus(
       isConnected: await _isConnected(),
       isSyncing: _isSyncing,
       lastSyncTime: DateTime.now(), // You might want to store this
+      pendingUploads: todosNeedingSync.length,
+      unresolvedConflicts: unresolvedConflicts.length,
+      lastSyncAttempt: DateTime.now(), // You might want to store this
     );
   }
 }
@@ -258,10 +264,16 @@ class SyncStatus {
   final bool isConnected;
   final bool isSyncing;
   final DateTime lastSyncTime;
+  final int pendingUploads;
+  final int unresolvedConflicts;
+  final DateTime lastSyncAttempt;
 
   SyncStatus({
     required this.isConnected,
     required this.isSyncing,
     required this.lastSyncTime,
+    required this.pendingUploads,
+    required this.unresolvedConflicts,
+    required this.lastSyncAttempt,
   });
 }
