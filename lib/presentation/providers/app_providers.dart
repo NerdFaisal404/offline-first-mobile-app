@@ -39,6 +39,7 @@ final syncServiceProvider = Provider<SyncService>((ref) {
   return SyncService(
     todoRepository: ref.read(todoRepositoryProvider),
     firebaseDataSource: ref.read(firebaseDataSourceProvider),
+    localDatabase: ref.read(localDatabaseProvider),
     connectivity: ref.read(connectivityProvider),
   );
 });

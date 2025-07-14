@@ -19,6 +19,9 @@ class TodoRepositoryImpl implements TodoRepository {
   final _todosController = StreamController<List<Todo>>.broadcast();
   final _conflictsController = StreamController<List<Conflict>>.broadcast();
 
+  // Timer for periodic local updates
+  Timer? _updateTimer;
+
   // Add callback for sync triggering
   void Function()? _onDataChanged;
 
@@ -197,16 +200,17 @@ class TodoRepositoryImpl implements TodoRepository {
 
   @override
   Stream<List<Todo>> watchTodos() {
-    // Emit initial data
-    getAllTodos().then((todos) => _todosController.add(todos));
+    // Start periodic updates and emit initial data
+    _startPeriodicUpdates();
+    _emitTodosUpdate();
     return _todosController.stream;
   }
 
   @override
   Stream<List<Conflict>> watchConflicts() {
-    // Emit initial data
-    getUnresolvedConflicts()
-        .then((conflicts) => _conflictsController.add(conflicts));
+    // Start periodic updates and emit initial data
+    _startPeriodicUpdates();
+    _emitConflictsUpdate();
     return _conflictsController.stream;
   }
 
@@ -215,17 +219,38 @@ class TodoRepositoryImpl implements TodoRepository {
     _onDataChanged?.call();
   }
 
+  /// Start periodic updates for streams
+  void _startPeriodicUpdates() {
+    if (_updateTimer != null && _updateTimer!.isActive) return;
+
+    _updateTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      _emitTodosUpdate();
+      _emitConflictsUpdate();
+    });
+  }
+
+  /// Stop periodic updates
+  void _stopPeriodicUpdates() {
+    _updateTimer?.cancel();
+    _updateTimer = null;
+  }
+
   Future<void> _emitTodosUpdate() async {
     final todos = await getAllTodos();
-    _todosController.add(todos);
+    if (!_todosController.isClosed) {
+      _todosController.add(todos);
+    }
   }
 
   Future<void> _emitConflictsUpdate() async {
     final conflicts = await getUnresolvedConflicts();
-    _conflictsController.add(conflicts);
+    if (!_conflictsController.isClosed) {
+      _conflictsController.add(conflicts);
+    }
   }
 
   void dispose() {
+    _stopPeriodicUpdates();
     _todosController.close();
     _conflictsController.close();
   }
