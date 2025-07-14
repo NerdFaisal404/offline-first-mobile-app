@@ -63,14 +63,18 @@ class ConflictResolver {
     Todo remoteVersion,
     String currentDeviceId,
   ) {
+    print('   🧠 Analyzing concurrent conflict...');
+
     // Check if one version is deleted
     if (localVersion.isDeleted != remoteVersion.isDeleted) {
       if (localVersion.isDeleted) {
+        print('   🗑️ Local deleted - using local');
         return ConflictResolution(
           type: ResolutionType.useLocal, // Prefer deletion
           mergedTodo: localVersion,
         );
       } else {
+        print('   🗑️ Remote deleted - using remote');
         return ConflictResolution(
           type: ResolutionType.useRemote, // Prefer deletion
           mergedTodo: remoteVersion,
@@ -80,7 +84,21 @@ class ConflictResolver {
 
     // If both are deleted, use the one with higher clock
     if (localVersion.isDeleted && remoteVersion.isDeleted) {
+      print('   🗑️ Both deleted - using latest by clock');
       return _useLatestByClock(localVersion, remoteVersion);
+    }
+
+    // Try smart field-level merging
+    try {
+      final mergedTodo =
+          _attemptSmartMerge(localVersion, remoteVersion, currentDeviceId);
+      print('   🤖 Smart merge successful');
+      return ConflictResolution(
+        type: ResolutionType.useAutoMerged,
+        mergedTodo: mergedTodo,
+      );
+    } catch (e) {
+      print('   ⚠️ Smart merge failed: $e');
     }
 
     // Check if only completion status differs (auto-resolvable)
@@ -90,6 +108,7 @@ class ConflictResolver {
           ? (localVersion.isCompleted ? localVersion : remoteVersion)
           : localVersion;
 
+      print('   ✅ Auto-resolved completion conflict');
       return ConflictResolution(
         type: ResolutionType.useAutoMerged,
         mergedTodo: mergedTodo,
@@ -98,6 +117,7 @@ class ConflictResolver {
 
     // Check if content fields (name/price) differ - requires manual resolution
     if (_contentFieldsDiffer(localVersion, remoteVersion)) {
+      print('   👤 Requires manual resolution');
       return ConflictResolution(
         type: ResolutionType.requiresManualResolution,
         localVersion: localVersion,
@@ -106,6 +126,7 @@ class ConflictResolver {
     }
 
     // Default to using the version with the highest vector clock sum
+    print('   🕐 Using latest by clock as fallback');
     return _useLatestByClock(localVersion, remoteVersion);
   }
 
@@ -125,6 +146,55 @@ class ConflictResolver {
         mergedTodo: remoteVersion,
       );
     }
+  }
+
+  /// Attempt smart field-level merging
+  Todo _attemptSmartMerge(Todo local, Todo remote, String deviceId) {
+    // Only attempt smart merge if the changes are compatible
+    final nameChanged = local.name != remote.name;
+    final priceChanged = local.price != remote.price;
+    final completionChanged = local.isCompleted != remote.isCompleted;
+
+    // Smart merge rules
+    String mergedName = local.name;
+    double mergedPrice = local.price;
+    bool mergedCompletion = local.isCompleted;
+
+    // Name merging: prefer longer/more descriptive name
+    if (nameChanged) {
+      if (local.name.length > remote.name.length * 1.2) {
+        mergedName = local.name;
+      } else if (remote.name.length > local.name.length * 1.2) {
+        mergedName = remote.name;
+      } else {
+        // Names are similar length - require manual resolution
+        throw Exception('Names require manual resolution');
+      }
+    }
+
+    // Price merging: prefer higher price (assume price increases)
+    if (priceChanged) {
+      mergedPrice = local.price > remote.price ? local.price : remote.price;
+    }
+
+    // Completion merging: prefer completed state
+    if (completionChanged) {
+      mergedCompletion = local.isCompleted || remote.isCompleted;
+    }
+
+    // Create merged todo with incremented vector clock
+    final mergedVectorClock =
+        local.vectorClock.merge(remote.vectorClock).increment(deviceId);
+
+    return local.copyWith(
+      name: mergedName,
+      price: mergedPrice,
+      isCompleted: mergedCompletion,
+      updatedAt: DateTime.now(),
+      vectorClock: mergedVectorClock,
+      deviceId: deviceId,
+      version: local.version + 1,
+    );
   }
 
   /// Check if two todos are identical in all fields
