@@ -25,7 +25,7 @@ final connectivityProvider = Provider<Connectivity>((ref) {
   return Connectivity();
 });
 
-// Repository provider
+// Repository provider (without sync callback)
 final todoRepositoryProvider = Provider<TodoRepository>((ref) {
   return TodoRepositoryImpl(
     localDatabase: ref.read(localDatabaseProvider),
@@ -41,6 +41,21 @@ final syncServiceProvider = Provider<SyncService>((ref) {
     firebaseDataSource: ref.read(firebaseDataSourceProvider),
     connectivity: ref.read(connectivityProvider),
   );
+});
+
+// Initialize sync callback after both providers are created
+final syncInitializerProvider = Provider<void>((ref) {
+  final repository = ref.read(todoRepositoryProvider) as TodoRepositoryImpl;
+  final syncService = ref.read(syncServiceProvider);
+
+  // Set up the data change callback
+  repository.setDataChangeCallback(() {
+    // Trigger sync when data changes
+    syncService.forcSync().catchError((e) {
+      // Handle error silently - sync will retry
+      print('Auto-sync failed: $e');
+    });
+  });
 });
 
 // State providers

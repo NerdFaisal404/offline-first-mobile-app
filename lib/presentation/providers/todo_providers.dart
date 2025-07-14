@@ -224,21 +224,36 @@ class SyncNotifier extends StateNotifier<AsyncValue<SyncResult?>> {
 final todoNotifierProvider =
     StateNotifierProvider<TodoNotifier, AsyncValue<void>>((ref) {
   final repository = ref.read(todoRepositoryProvider);
-  final deviceId = ref.read(deviceIdProvider).value ?? 'unknown';
-  return TodoNotifier(repository, deviceId);
+  // Use a default device ID first, will be updated when device ID is ready
+  return TodoNotifier(repository, 'temp-device');
 });
 
 final conflictNotifierProvider =
     StateNotifierProvider<ConflictNotifier, AsyncValue<void>>((ref) {
   final repository = ref.read(todoRepositoryProvider);
-  final deviceId = ref.read(deviceIdProvider).value ?? 'unknown';
-  return ConflictNotifier(repository, deviceId);
+  // Use a default device ID first, will be updated when device ID is ready
+  return ConflictNotifier(repository, 'temp-device');
 });
 
 final syncNotifierProvider =
     StateNotifierProvider<SyncNotifier, AsyncValue<SyncResult?>>((ref) {
   final syncService = ref.read(syncServiceProvider);
   return SyncNotifier(syncService);
+});
+
+// Device-aware providers that wait for device ID
+final deviceAwareTodoNotifierProvider =
+    StateNotifierProvider.family<TodoNotifier, AsyncValue<void>, String>(
+        (ref, deviceId) {
+  final repository = ref.read(todoRepositoryProvider);
+  return TodoNotifier(repository, deviceId);
+});
+
+final deviceAwareConflictNotifierProvider =
+    StateNotifierProvider.family<ConflictNotifier, AsyncValue<void>, String>(
+        (ref, deviceId) {
+  final repository = ref.read(todoRepositoryProvider);
+  return ConflictNotifier(repository, deviceId);
 });
 
 // UI state providers

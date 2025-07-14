@@ -9,8 +9,15 @@ class ConflictResolver {
     required Todo remoteVersion,
     required String currentDeviceId,
   }) {
+    print('🔍 Resolving conflict for todo ${localVersion.id}');
+    print(
+        '   Local: ${localVersion.name} (\$${localVersion.price}) - ${localVersion.vectorClock}');
+    print(
+        '   Remote: ${remoteVersion.name} (\$${remoteVersion.price}) - ${remoteVersion.vectorClock}');
+
     // If they're identical, no conflict
     if (_todosAreIdentical(localVersion, remoteVersion)) {
+      print('   ✅ No conflict - todos are identical');
       return ConflictResolution(
         type: ResolutionType.useLocal,
         mergedTodo: localVersion,
@@ -21,9 +28,12 @@ class ConflictResolver {
     final clockComparison =
         localVersion.vectorClock.compareTo(remoteVersion.vectorClock);
 
+    print('   🕐 Clock comparison: $clockComparison');
+
     switch (clockComparison) {
       case ComparisonResult.before:
         // Local happened before remote - use remote
+        print('   ⬆️ Using remote version (newer)');
         return ConflictResolution(
           type: ResolutionType.useRemote,
           mergedTodo: remoteVersion,
@@ -31,6 +41,7 @@ class ConflictResolver {
 
       case ComparisonResult.after:
         // Local happened after remote - use local
+        print('   ⬇️ Using local version (newer)');
         return ConflictResolution(
           type: ResolutionType.useLocal,
           mergedTodo: localVersion,
@@ -38,8 +49,11 @@ class ConflictResolver {
 
       case ComparisonResult.concurrent:
         // Concurrent changes - need to resolve conflict
-        return _resolveConcurrentConflict(
+        print('   🔄 Concurrent changes detected - resolving...');
+        final resolution = _resolveConcurrentConflict(
             localVersion, remoteVersion, currentDeviceId);
+        print('   📝 Resolution: ${resolution.type}');
+        return resolution;
     }
   }
 

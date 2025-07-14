@@ -91,23 +91,33 @@ class SyncService {
   /// Perform the actual sync operation
   Future<SyncResult> _performSync() async {
     _isSyncing = true;
+    print('🔄 Starting sync operation...');
 
     try {
       // Step 1: Upload local changes to remote
+      print('📤 Uploading local changes...');
       final uploadResult = await _uploadLocalChanges();
+      print('📤 Uploaded ${uploadResult.count} todos');
 
       // Step 2: Download remote changes
+      print('📥 Downloading remote changes...');
       final downloadResult = await _downloadRemoteChanges();
+      print(
+          '📥 Downloaded ${downloadResult.count} todos, ${downloadResult.conflicts} conflicts');
 
       _isSyncing = false;
 
-      return SyncResult.success(
+      final result = SyncResult.success(
         uploaded: uploadResult.count,
         downloaded: downloadResult.count,
         conflicts: downloadResult.conflicts,
       );
+
+      print('✅ Sync completed successfully');
+      return result;
     } catch (e) {
       _isSyncing = false;
+      print('❌ Sync failed: $e');
 
       // Retry after delay
       Timer(_retryDelay, () => _scheduleSync());
@@ -178,16 +188,10 @@ class SyncService {
 
   /// Get sync status
   Future<SyncStatus> getSyncStatus() async {
-    final todosNeedingSync = await _todoRepository.getTodosNeedingSync();
-    final unresolvedConflicts = await _todoRepository.getUnresolvedConflicts();
-    final isConnected = await _isConnected();
-
     return SyncStatus(
-      isConnected: isConnected,
+      isConnected: await _isConnected(),
       isSyncing: _isSyncing,
-      pendingUploads: todosNeedingSync.length,
-      unresolvedConflicts: unresolvedConflicts.length,
-      lastSyncAttempt: DateTime.now(),
+      lastSyncTime: DateTime.now(), // You might want to store this
     );
   }
 }
@@ -195,25 +199,25 @@ class SyncService {
 /// Result of a sync operation
 class SyncResult {
   final bool success;
-  final String? error;
   final int uploaded;
   final int downloaded;
   final int conflicts;
+  final String? error;
 
-  SyncResult._({
+  SyncResult({
     required this.success,
-    this.error,
     this.uploaded = 0,
     this.downloaded = 0,
     this.conflicts = 0,
+    this.error,
   });
 
   factory SyncResult.success({
-    required int uploaded,
-    required int downloaded,
-    required int conflicts,
+    int uploaded = 0,
+    int downloaded = 0,
+    int conflicts = 0,
   }) {
-    return SyncResult._(
+    return SyncResult(
       success: true,
       uploaded: uploaded,
       downloaded: downloaded,
@@ -222,46 +226,42 @@ class SyncResult {
   }
 
   factory SyncResult.error(String error) {
-    return SyncResult._(success: false, error: error);
+    return SyncResult(success: false, error: error);
   }
 
   factory SyncResult.noConnection() {
-    return SyncResult._(success: false, error: 'No internet connection');
+    return SyncResult(success: false, error: 'No internet connection');
   }
 
   factory SyncResult.alreadyInProgress() {
-    return SyncResult._(success: false, error: 'Sync already in progress');
+    return SyncResult(success: false, error: 'Sync already in progress');
   }
 }
 
-/// Result of uploading local changes
+/// Upload result
 class UploadResult {
   final int count;
 
   UploadResult({required this.count});
 }
 
-/// Result of downloading remote changes
+/// Download result
 class DownloadResult {
   final int count;
   final int conflicts;
 
-  DownloadResult({required this.count, required this.conflicts});
+  DownloadResult({required this.count, this.conflicts = 0});
 }
 
-/// Current sync status
+/// Sync status information
 class SyncStatus {
   final bool isConnected;
   final bool isSyncing;
-  final int pendingUploads;
-  final int unresolvedConflicts;
-  final DateTime lastSyncAttempt;
+  final DateTime lastSyncTime;
 
   SyncStatus({
     required this.isConnected,
     required this.isSyncing,
-    required this.pendingUploads,
-    required this.unresolvedConflicts,
-    required this.lastSyncAttempt,
+    required this.lastSyncTime,
   });
 }

@@ -61,6 +61,9 @@ class _AppInitializerState extends ConsumerState<AppInitializer> {
     // Initialize device ID
     await ref.read(deviceIdProvider.future);
 
+    // Initialize sync callback setup
+    ref.read(syncInitializerProvider);
+
     // Start sync service
     final syncService = ref.read(syncServiceProvider);
     await syncService.start();

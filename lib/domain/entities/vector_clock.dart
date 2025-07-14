@@ -52,6 +52,7 @@ class VectorClock extends Equatable {
   ComparisonResult compareTo(VectorClock other) {
     bool thisLessOrEqual = true;
     bool otherLessOrEqual = true;
+    bool areEqual = true;
 
     final allDevices = {...deviceIds, ...other.deviceIds};
 
@@ -61,19 +62,28 @@ class VectorClock extends Equatable {
 
       if (thisClock > otherClock) {
         otherLessOrEqual = false;
+        areEqual = false;
       }
       if (otherClock > thisClock) {
         thisLessOrEqual = false;
+        areEqual = false;
       }
     }
 
-    if (thisLessOrEqual && otherLessOrEqual) {
-      return ComparisonResult.concurrent; // Equal clocks
-    } else if (thisLessOrEqual) {
+    // If clocks are exactly equal, treat as concurrent (no conflict)
+    if (areEqual) {
+      return ComparisonResult.concurrent;
+    }
+    // If this clock is less than or equal to other (and not equal), this happened before
+    else if (thisLessOrEqual) {
       return ComparisonResult.before;
-    } else if (otherLessOrEqual) {
+    }
+    // If other clock is less than or equal to this (and not equal), this happened after
+    else if (otherLessOrEqual) {
       return ComparisonResult.after;
-    } else {
+    }
+    // Neither dominates the other - truly concurrent
+    else {
       return ComparisonResult.concurrent;
     }
   }

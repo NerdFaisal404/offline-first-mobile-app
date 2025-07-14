@@ -19,6 +19,9 @@ class TodoRepositoryImpl implements TodoRepository {
   final _todosController = StreamController<List<Todo>>.broadcast();
   final _conflictsController = StreamController<List<Conflict>>.broadcast();
 
+  // Add callback for sync triggering
+  void Function()? _onDataChanged;
+
   TodoRepositoryImpl({
     required LocalDatabase localDatabase,
     required FirebaseDataSource firebaseDataSource,
@@ -26,6 +29,11 @@ class TodoRepositoryImpl implements TodoRepository {
   })  : _localDatabase = localDatabase,
         _firebaseDataSource = firebaseDataSource,
         _conflictResolver = conflictResolver;
+
+  /// Set callback for when data changes (triggers sync)
+  void setDataChangeCallback(void Function()? callback) {
+    _onDataChanged = callback;
+  }
 
   @override
   Future<List<Todo>> getAllTodos() async {
@@ -46,12 +54,14 @@ class TodoRepositoryImpl implements TodoRepository {
   Future<void> createTodo(Todo todo) async {
     await _localDatabase.insertTodo(todo);
     _emitTodosUpdate();
+    _triggerSync(); // Add sync trigger
   }
 
   @override
   Future<void> updateTodo(Todo todo) async {
     await _localDatabase.updateTodo(todo);
     _emitTodosUpdate();
+    _triggerSync(); // Add sync trigger
   }
 
   @override
@@ -65,6 +75,7 @@ class TodoRepositoryImpl implements TodoRepository {
     }
 
     _emitTodosUpdate();
+    _triggerSync(); // Add sync trigger
   }
 
   @override
@@ -174,8 +185,8 @@ class TodoRepositoryImpl implements TodoRepository {
 
     // Generate new device ID if none exists
     final newDeviceId = _uuid.v4();
-    await updateCurrentDevice(
-        newDeviceId, 'Device-${newDeviceId.substring(0, 8)}');
+    final deviceName = 'Device-${newDeviceId.substring(0, 8)}';
+    await updateCurrentDevice(newDeviceId, deviceName);
     return newDeviceId;
   }
 
@@ -197,6 +208,11 @@ class TodoRepositoryImpl implements TodoRepository {
     getUnresolvedConflicts()
         .then((conflicts) => _conflictsController.add(conflicts));
     return _conflictsController.stream;
+  }
+
+  /// Trigger sync when data changes
+  void _triggerSync() {
+    _onDataChanged?.call();
   }
 
   Future<void> _emitTodosUpdate() async {
