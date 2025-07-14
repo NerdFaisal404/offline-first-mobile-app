@@ -280,6 +280,9 @@ class SyncService {
       // Process remote todos (this handles conflict resolution)
       await _todoRepository.syncFromRemote(remoteTodos);
 
+      // Clean up local deleted todos that are confirmed deleted remotely
+      await _cleanupDeletedTodos(remoteTodos);
+
       // Get unresolved conflicts after sync
       final conflictsAfter = await _todoRepository.getUnresolvedConflicts();
 
@@ -339,10 +342,12 @@ class SyncService {
       // Update local devices table with remote devices
       for (final remoteDevice in remoteDevices) {
         // First check if device exists, then update or insert
-        final existingDevice =
+        final existingDevices =
             await (_localDatabase.select(_localDatabase.devices)
                   ..where((d) => d.id.equals(remoteDevice.id)))
-                .getSingleOrNull();
+                .get();
+        final existingDevice =
+            existingDevices.isNotEmpty ? existingDevices.first : null;
 
         if (existingDevice != null) {
           // Update existing device
@@ -403,6 +408,27 @@ class SyncService {
         print('❌ Failed to send device heartbeat: $e');
       }
     });
+  }
+
+  /// Clean up local deleted todos that are confirmed deleted remotely
+  Future<void> _cleanupDeletedTodos(List<Todo> remoteTodos) async {
+    try {
+      final localTodos = await _todoRepository.getAllTodos();
+      final localDeletedTodos = localTodos.where((t) => t.isDeleted).toList();
+
+      for (final localDeleted in localDeletedTodos) {
+        // Check if this deleted todo exists in remote (should not if properly deleted)
+        final existsInRemote = remoteTodos.any((r) => r.id == localDeleted.id);
+
+        if (!existsInRemote) {
+          // Todo is deleted locally and doesn't exist remotely - safe to permanently delete
+          await _localDatabase.deleteTodo(localDeleted.id);
+          print('🗑️ Permanently deleted todo: ${localDeleted.name}');
+        }
+      }
+    } catch (e) {
+      print('❌ Failed to cleanup deleted todos: $e');
+    }
   }
 
   /// Get sync status

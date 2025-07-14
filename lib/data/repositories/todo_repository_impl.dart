@@ -137,6 +137,19 @@ class TodoRepositoryImpl implements TodoRepository {
     final localTodo =
         localTodos.where((todo) => todo.id == remoteTodo.id).firstOrNull;
 
+    // Handle deleted remote todos
+    if (remoteTodo.isDeleted) {
+      if (localTodo != null && !localTodo.isDeleted) {
+        // Remote todo is deleted but local is not - mark local as deleted
+        final deletedTodo = localTodo.markDeleted(deviceId);
+        await _localDatabase.updateTodo(deletedTodo);
+      } else if (localTodo != null && localTodo.isDeleted) {
+        // Both are deleted - remove from local database
+        await _localDatabase.deleteTodo(localTodo.id);
+      }
+      return;
+    }
+
     if (localTodo == null) {
       // New remote todo - just insert it
       await _localDatabase

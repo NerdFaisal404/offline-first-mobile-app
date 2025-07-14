@@ -33,9 +33,29 @@ class LocalDatabase extends _$LocalDatabase {
   }
 
   Future<Todo?> getTodoById(String id) async {
-    final todoData =
-        await (select(todos)..where((t) => t.id.equals(id))).getSingleOrNull();
-    return todoData != null ? _todoDataToEntity(todoData) : null;
+    final todoDataList =
+        await (select(todos)..where((t) => t.id.equals(id))).get();
+
+    if (todoDataList.isEmpty) return null;
+
+    if (todoDataList.length > 1) {
+      // Handle duplicates - keep the most recent one and delete others
+      print(
+          '⚠️ Found ${todoDataList.length} todos with same ID: $id - cleaning up duplicates');
+
+      // Sort by updatedAt, keep the latest
+      todoDataList.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+      final latestTodo = todoDataList.first;
+
+      // Delete all duplicates and re-insert the latest one
+      await (delete(todos)..where((t) => t.id.equals(id))).go();
+      await into(todos)
+          .insert(_todoEntityToData(_todoDataToEntity(latestTodo)));
+
+      return _todoDataToEntity(latestTodo);
+    }
+
+    return _todoDataToEntity(todoDataList.first);
   }
 
   Future<List<Todo>> getTodosNeedingSync() async {
@@ -109,10 +129,31 @@ class LocalDatabase extends _$LocalDatabase {
   }
 
   Future<String?> getCurrentDeviceId() async {
-    final device = await (select(devices)
+    final deviceList = await (select(devices)
           ..where((d) => d.isCurrentDevice.equals(true)))
-        .getSingleOrNull();
-    return device?.id;
+        .get();
+
+    if (deviceList.isEmpty) return null;
+
+    if (deviceList.length > 1) {
+      // Multiple current devices - clean up and keep the most recent
+      print(
+          '⚠️ Found ${deviceList.length} current devices - cleaning up duplicates');
+
+      // Sort by lastSeen, keep the latest
+      deviceList.sort((a, b) => b.lastSeen.compareTo(a.lastSeen));
+      final latestDevice = deviceList.first;
+
+      // Mark all as not current, then set the latest one as current
+      await update(devices)
+          .write(DevicesCompanion(isCurrentDevice: Value(false)));
+      await (update(devices)..where((d) => d.id.equals(latestDevice.id)))
+          .write(DevicesCompanion(isCurrentDevice: Value(true)));
+
+      return latestDevice.id;
+    }
+
+    return deviceList.first.id;
   }
 
   // Utility methods for entity conversion
