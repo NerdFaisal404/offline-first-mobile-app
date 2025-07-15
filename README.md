@@ -88,6 +88,13 @@ dart run build_runner build
 flutter run
 ```
 
+## 📖 **Documentation**
+
+- **[📋 Architecture Documentation](ARCHITECTURE.md)** - Comprehensive UML diagrams, system architecture, and component interactions
+- **[🏗️ Clean Architecture](ARCHITECTURE.md#functional-system-architecture)** - Layered architecture with separation of concerns
+- **[⚖️ Conflict Resolution](ARCHITECTURE.md#conflict-resolution--sync-flow)** - Vector clock-based conflict detection and resolution
+- **[📡 Real-time Sync](ARCHITECTURE.md#system-data-flow--component-interaction)** - Multi-device synchronization patterns
+
 ## 📁 **Project Structure**
 
 ```
