@@ -48,10 +48,17 @@ dependencies:
 
   # Networking & Connectivity
   connectivity_plus: ^5.0.2
+  network_info_plus: ^4.1.0  # Network interface discovery
+  nsd: ^4.0.3               # Network service discovery (mDNS)
+  
+  # Security
+  crypto: ^3.0.3            # Cryptographic functions
+  pointycastle: ^3.7.3      # Advanced cryptography
+  
+  # HTTP & Utilities
   http: ^1.1.2
-
-  # Utilities
-  uuid: ^4.2.1
+  uuid: ^4.2.1              # UUID generation (using latest version)
+  collection: ^1.17.2       # Advanced collections
   json_annotation: ^4.8.1
   freezed_annotation: ^2.4.1
   equatable: ^2.0.5

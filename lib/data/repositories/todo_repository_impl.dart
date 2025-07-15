@@ -3,15 +3,14 @@ import 'package:uuid/uuid.dart';
 
 import '../../domain/entities/todo.dart';
 import '../../domain/entities/conflict.dart';
-import '../../domain/entities/vector_clock.dart';
 import '../../domain/repositories/todo_repository.dart';
 import '../datasources/local_database.dart';
-import '../datasources/firebase_datasource.dart';
+import '../datasources/mesh_datasource.dart';
 import '../../core/utils/conflict_resolver.dart';
 
 class TodoRepositoryImpl implements TodoRepository {
   final LocalDatabase _localDatabase;
-  final FirebaseDataSource _firebaseDataSource;
+  final MeshDataSource _meshDataSource;
   final ConflictResolver _conflictResolver;
   final Uuid _uuid = const Uuid();
 
@@ -27,10 +26,10 @@ class TodoRepositoryImpl implements TodoRepository {
 
   TodoRepositoryImpl({
     required LocalDatabase localDatabase,
-    required FirebaseDataSource firebaseDataSource,
+    required MeshDataSource meshDataSource,
     required ConflictResolver conflictResolver,
   })  : _localDatabase = localDatabase,
-        _firebaseDataSource = firebaseDataSource,
+        _meshDataSource = meshDataSource,
         _conflictResolver = conflictResolver;
 
   /// Set callback for when data changes (triggers sync)
@@ -56,6 +55,10 @@ class TodoRepositoryImpl implements TodoRepository {
   @override
   Future<void> createTodo(Todo todo) async {
     await _localDatabase.insertTodo(todo);
+
+    // Broadcast to mesh network
+    await _meshDataSource.sendTodoUpdate(todo);
+
     _emitTodosUpdate();
     _triggerSync(); // Add sync trigger
   }
@@ -63,6 +66,10 @@ class TodoRepositoryImpl implements TodoRepository {
   @override
   Future<void> updateTodo(Todo todo) async {
     await _localDatabase.updateTodo(todo);
+
+    // Broadcast to mesh network
+    await _meshDataSource.sendTodoUpdate(todo);
+
     _emitTodosUpdate();
     _triggerSync(); // Add sync trigger
   }
@@ -75,6 +82,9 @@ class TodoRepositoryImpl implements TodoRepository {
     if (existingTodo != null) {
       final deletedTodo = existingTodo.markDeleted(deviceId);
       await _localDatabase.updateTodo(deletedTodo);
+
+      // Broadcast deletion to mesh network
+      await _meshDataSource.sendTodoDelete(deletedTodo);
     }
 
     _emitTodosUpdate();

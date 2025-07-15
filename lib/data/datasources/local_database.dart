@@ -113,7 +113,7 @@ class LocalDatabase extends _$LocalDatabase {
   // Device operations
   Future<void> updateCurrentDevice(String deviceId, String deviceName) async {
     // First, mark all devices as not current
-    await update(devices).write(DevicesCompanion(
+    await update(devices).write(const DevicesCompanion(
       isCurrentDevice: Value(false),
     ));
 
